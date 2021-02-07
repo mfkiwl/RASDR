@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<wxsmith>
+	<object class="wxPanel" name="pnlSamplesGenerator">
+		<size>913,263</size>
+		<id_arg>0</id_arg>
+	</object>
+</wxsmith>

@@ -1,0 +1,211 @@
+RASDRproc v0.2.5.4 -  Jan 22, 2017
+==================================
+
+RASDRproc.exe is the open-source version of the RASDR device setup and data collection program
+RASDRproc_d.exe is a debug version that opens a DOS console which writes diagnostic data out
+
+The program is able to configure RASDR2 and RASDR3 devices, set sample rates and receiver parameters.  It can optionally also display received data in time and frequency domain, I vs Q and total power.  Data collected may be saved to ASCII output files for further analysis and post-processing.
+
+
+System Requirements:
+
+1. Windows (XP or later) machine.  Dual core machines will work but a quad (or larger) core system is recommended.
+2. Lime Microsystems/Myriad RF - DigiRed board with Myriad RF board ("RASDR2").
+3. USB 2 or USB 3 port.
+4. SARA "RASDR Radio Astronomy SDR Rx Interface" driver.
+
+
+Usage:
+
+Connect a RASDR2 device to the USB port of your computer (see the RASDR user manual for details on assigning the driver).  Double-click either RASDRproc or RASDRproc_d and wait for it to configure the device.  If you see non-zero values for "chip: rev: mask:" in the lower-left corner of the screen, it has connected to the RASDR device successfully.  Otherwise, you may still use the GUI functions to setup the configuration file.
+
+At this point, you may press 'Start Acquisition' and observe the data collection.
+
+When you close the program, the last set of parameters used will be written to the "RASDR.cfg" file for use next time.  RASDRproc produces annotated configuration files whose settings are described in the file itself.  It is compatible with the (un-annotated) ASCII configuration files used by RASDRviewer 1.2.2.2 and BELOW.
+
+
+DC Offset Correction:
+
+RASDRproc employs *post* acquisition DC Offset Correction.  The calibration procedure is as follows:
+
+1) Setup the desired acquisition parameters and start data collection.  While collecting data, connect a 50ohm load to the RX of the receiver.  With v0.2.3.7+, you may also select the RX input to 'disconnect'.  While this is not a 50ohm load (rather a High-Z) it can still be useful for adjusting the DC offset. 
+
+2) From the 'Performance Parameters' menu, select 'Tuning Parameters'.  This brings up a pop-up window where an I and Q offset is able to be entered.  While data is being collected, press the 'Use Current Averages' and observe that the values are updated. Then, press 'OK Accept Values' and see that the DC offset correction is applied.
+
+The calibration values are saved along with the other parameters in the RASDR.cfg file.
+
+If necessary, repeat the above procedure to compute new offsets.  Typically, it has not been seen that the offset needs to be corrected continuously, but the offset IS different each time the RASDR2 device is powered up and it does depend on what antenna system and front end electronics are connected to the RASDR RX port, as well as the sampling rate and gain settings.
+
+NEW with v0.2.3.4:  The DC calibration can be made from the front panel.  A measure of the difference between ideal is calculated and displayed continuously according to the Mean-Square-Error formula:
+
+MSE = ((DCOffsetI - avgI)^2 + (DCOffsetQ - avgQ)^2) / 2.0
+
+CHANGED with v0.2.3.8:  Added a measure of the %-difference from the maximum ADC value that the DC offset is set to.  The background color of the skew metric is now as follows:
+
+If the PERCENT is < 5.0 the display will be gray
+If the PERCENT is 5.0 < 10.0, the display will be yellow
+If the PERCENT is > 10.0, the display will be red
+
+The option to do automatic (continuous) DC offset calibration (that was the only option in RASDRviewer 1.2.2.2 and BELOW) is restored with a check-box in RASDRproc v0.2.3.4 and above.
+
+NOTE: there is a DC offset adjustment that is performed on the LMS chip as part of tuning, but currently it is an open-loop procedure that is does not produce optimal result.  Future revisions may address this issue.
+
+
+Auto Restart:
+
+RASDR2 devices when used in USB3 on marginal machines exhibit a stall acquiring data.  It has been shown that if data acquisition is stopped, then started dataflow may recover (but not always).  In those cases, the driver must be closed and re-opened, and then dataflow recovers.  This version of RASDRproc implements a detection and mitigation for this condition.  It is enabled by checking the 'Auto Restart' tick box in the upper right corner near the frame rate display.
+
+In addition, this version annotates the data rate and frame rate display with a comparision to the expected rates and uses a RED or YELLOW background if the program is not keeping up.  The thresholds are fixed at compile time at the moment.
+
+With v0.2.3.6, some aspects of this have changed.  Users have reported random application crashes and these appear to be related to thread-safety issues which are endemic in the code architecture.  A small amount of safety w/r/t the access to the endpoint data structures and the CyUSB library was put into place, and it seems to have a positive effect upon the liklihood of an application crash when stopping.  I have a low-spec development system in which USB3 operation is extremely marginal, calling for frequent resets of the USB device.
+
+
+Gain, Bandwidth and LNA Selection:
+
+With v0.2.3.7, some aspects of this have changed.  Changing gain values for the VGA and LNA as well as the LPF filter bandwidth now takes place immediately upon selection.  I.e. it is not required to 'Apply' which would cause an acquisition stop, configure and acquisition start cycle.  The only setting that requires an 'Apply' is the changing of the 'RF Ctr Freq' (and that is only due to more complex GUI issues than any actual restriction in the LMS6002D).  The 'Apply' button has been moved and renamed to be near the entry field.
+
+Further, with v0.2.3.7, the ability to select which LNA port is active on the LMS6002D chip is available.  However, testing has shown that LNA1 is the only viable port; LNA3 does not appear to provide a useful response in tests conducted at 408MHz (even though it *should*).  Additionally, the RX->LNA switching that is available on the DigiRed board is now exposed.  This means that the user can disconnect the LMS6002D from the RX input to measure internal system behavior.  NOTE: it does not provide a 50ohm input to the LNA, rather it provides a Hi-Z.  This is the way that the circuit is wired on the DigiRed, and identifies an area of inprovement in the next design.
+
+The bottom row status is updated to provide additional details on the specification of the input selected.
+
+
+Radio Sky Spectrograph Integration:
+
+This version supports a TCP/IP connection to allow Radio Sky Spectrograph to manage the display of a waterfall.  The protocol is described here:
+http://cygnusa.blogspot.com/2015/07/how-to-talk-to-radio-sky-spectrograph.html
+
+in RASDRproc the TCP/IP server, if enabled, will be active during periods of active acquisition (after pressing 'Start Acquisition').  In RSS, you tell it to use the 'RTL Dongle Receiver' under the Radio menu.  The connection is established by RSS when you press 'Start' on its GUI.  If you change certain parameters in RASDRproc or otherwise affect the frequency plan, the connection will disconnect and you can re-start by 'Start' on the RSS screen.  It seems to be pretty robust.  Please do make sure that RASDRproc RSS output is enabled and acquiring data *first* before pressing 'Start' on RSS.  Otherwise, it may take some time for it to timeout.
+
+The RSS control panel (in RASDRproc Define Output->Setup RSS Output menu) has several tunable parameters:
+
+- Channel Offset
+- Channel Gain
+- Channel Bias
+
+These affect the calculation of the spectrum output as follows:  S[n] = (( s[n] + offset ) * gain ) + bias
+
+- Minimum Value (clip)
+- Maximum value (clip)
+
+These will enforce the spectral outputs to limit values
+
+- Frequency Offset
+
+This can be used if you are using an upconverter to provide the correct offset frequency so that RSS will display the actual RF frequency instead of the IF frequency that the RASDR unit is tuned to.  NOTE: by rights, this is needed to be known by RASDRproc itself, but so far it was not implemented that way.  In the future this control may move to a different place, but for now it is listed here with the RSS stuff.
+
+There was a regression in v0.2.3.4 in which the RSS control panel settings became unavailable.  This was corrected in v0.2.3.5 (and hopefully from now on). 
+
+NEW with v0.2.5.2:  The "Extended RSS" protocol is implemented as described here:
+https://github.com/myriadrf/RASDR/issues/16
+
+In a nutshell, the RASDRproc program acts as a TCP server and listens for a connection on the port defined by the 'Setup RSS Output' as described above.  Configure your external program to connect to this IP:PORT combination.  Upon a connection, RASDRproc accepts the connection and sends an 1024-byte ASCII string as a response.  The response will be key value combinations separated by the "|" character.
+
+The following keys will be provided:
+    [CenterFrequencyHertz] The tuned center frequency in Hz
+    [BandwidthHertz] The bandwidth of the observation in Hz
+    [OffsetHertz] The offset frequency (in case an LNB or up/down converter is used with the receiver)
+    [NumberOfChannels] The number of frequency bins that will be provided for each scan line
+
+The following keys may be provided:
+    [IntegrationTimeSec] The amount of integration in seconds that will be used for each scan line
+    [GainDb] The total amount of receiver gain used
+    [NotesString] An ASCII string provided by the program to describe the observation (excluding the "|" character).
+
+For example:
+    CenterFrequencyHertz 21000000|BandwidthHertz 5000000|OffsetHertz 0|NumberOfChannels 2048|
+
+This would tell your program that the center frequency of the observation is 21 MHz. The bandwidth is 5 MHz, so the display will run from 21 + 2.5 to 21 - 2.5 MHz, or 18.5 MHz to 23.5 MHz. There is no offset so no frequency converter is used. Finally, NumberOfChannels denotes the number of channels that will be reported for each of the spectrum scans. There is no predefined limit on the number of channels, but the number is limited to a 4-byte unsigned integer. The connection block will be a fixed-size of 1024 bytes. Each of these parameters is separated by the pipe symbol "|". The parameter string will end with a CRLF. There may be trailing NUL to complete the 1024-byte connection block description.
+
+Following this, a constant stream of binary data will be provided. It is not necessary to interpret the connection block (above) as the binary stream will self-describe itself. It will consist of the following binary data elements (equivalent to a binary-version of the rtl-power specification) ***in Network Byte Order***:
+    [timestamp] IEEE-754 8-byte double representing the seconds since January 1, 1970 (the Unix Epoch)
+    [hz_low] IEEE-754 4-byte float representing the center frequency of the lowest frequency bin
+    [hz_high] IEEE-754 4-byte float representing the center frequency of the highest frequency bin
+    [hz_step] IEEE-754 4-byte float representing the difference between two adjacent frequency bins
+    [samples] A 4-byte unsigned integer representing the number of samples used to integrate each frequency bin
+    [channels] A 4-byte unsigned integer representing the number of frequency bins to follow
+    [db-values] IEEE-754 4-byte float * channels (as given in the header above)
+
+At the moment, as with the Radio-Sky-Spectrograph version, any changes to the acquisition parameters will close the socket, requiring a re-connection.  Subsequent edits will eliminate this need and simply update the stream header dynamically.  If new metadata is desired, disconnect and re-connect to obtain it.
+
+In v0.2.5.4, a bug was fixed in the "Extended RSS" protocol:  The extended RSS protocol is intended to write frequency values from low frequency to high frequency, in order to match the rtl-power format.  Prior to this, it was writing values from high to low frequency like the standard RSS protocol requires.  Also, the timestamping code was updated slightly to propagate it through the buffers.  A future release will introduce a reworked buffer and thread management code.
+
+
+Background Subtraction:
+
+RASDRproc has had the ability to perform live background subtraction on incoming spectral data.  However, this capability was not fully fleshed out until v0.2.3.8, when several adjustments were made including the exposure of the configuration settings to the Tuning Parameters dialog.
+
+To access the controls, from the 'Performance Parameters' menu, select 'Tuning Parameters'.  This brings up a pop-up window and there are two sections that affect the background subtraction:  'Spectral Averaging' and 'Spectral Background Subtraction'.  Both of these are dynamic in that they can be applied while data collection is active.
+
+>> Spectral Averaging
+
+The two controls here are 'Unlimited Averaging' and 'Reference to ADC Full Scale'.  Both of these features are not yet implemented.
+
+>> Spectral Background Subtraction
+
+In this section there are the following controls:
+
+- Enable
+
+This is used to activate the subtraction of a background level present at the time that the 'SetPwrRef' button is pressed on the main panel.  For testing convenience, a button 'Set Reference' is also provided on the pop-up window to allow adjustments while viewing the response on the main panel.  If this box is checked, then the spectral plot will will display the result of this equasion:
+
+PWR[f] = 10 * log10( (AVG(I[f]^2 + Q[f]^2) - REF[f]) * G )
+
+Where I[f], Q[f] are the normalized FFT outputs.  G is the 'Integration Gain' which is adjustable on the panel.  REF[f] is obtained at the time the 'SetPwrRef' or 'Set Reference' buttons are pressed.  It is computed according to the method control described below.
+
+Please note, that the code does not perform the SQRT of the I,Q data as part of the averaging.  It incorporates the SQRT by using a 10* instead of 20* for the power spectral density calculation.
+
+Also note, the current version of RASDRproc operates as if a rectangular window is applied to the time domain data prior to computing the FFT.  I.e. no windowing function is applied and no overlap of the FFT samples are performed.  Future versions may address this issue.
+
+- Visible
+
+This control determines whether or not the in-use background level is displayed or not.  If ticked, the current background waveform will be overlaid on the spectral plot in green.
+
+- Method
+
+This drop-down box determines the algorithm used to compute the REF[f] vector.  There are four possible choices, described below:
+
+    Mean:  This computes the mean value of the AVG(I[f]^2 + Q[f]^2) vector.  Typically, this selection tends to over estimate the background due to the contributions of the DC imbalance.  This is a scalar background, so that each element of REF[f] is set to this scalar value and so is applied equally to all the frequencies.
+    Median:  This computes the median value of the AVG(I[f]^2 + Q[f]^2) vector.  Typically, this selection estimates the background level very well, but depends on a flat baseline.  It is not sensitive to the DC imbalance.  Again, this is a scalar background, so that each element of REF[f] is set to this scalar value and so is applied equally to all the frequencies.
+    Histogram:  This computes a histogram of the of the 10 * log10( AVG(I[f]^2 + Q[f]^2) ) vector converted to integers.  It is operated on the logarithm scale to reduce the range of values that are used.  Following the selection, the reference level is recalculated to the linear value that matches the AVG() vector.  Typically, this selection slightly under-estimates the background level, but depends on a flat baseline.  It is not sensitive to the DC imbalance.  Again, this is a scalar background, so that each element of REF[f] is set to this scalar value and so is applied equally to all the frequencies.
+    Vector:  This setting uses the AVG(I[f]^2 + Q[f]^2) vector as the background directly.
+
+- Integration Gain
+
+This allows an adjustment to the 'G' parameter in the equasion for computing the power spectral density.  The intent is to provide a weighting factor to the residual energy remaining after the background is removed.
+
+
+Update plots:
+
+As of v0.2.3.8, the 'Update Plots' checkbox at the top left of the UI window operates correctly.  Previously, if this was unchecked, no FFTs were performed and not output was produced.  This has been fixed; FFTs and output (particularly to RSS) continue to be produced although the spectral and time domain plots no longer update.  On marginal computer systems this increases the frame rate considerably.  It is recommended for unattended data collection.
+
+
+Known Issues:
+
+1) The program will give an ugly dialog box if it cannot find its settings file 'RASDR.cfg', but will create a new one when the program exits.
+
+2) When using USB 3 on a marginal machine (e.g. dual core, 4GB RAM) the application is known to stop acquiring data.  With the updated Cypress WHQL driver, this condition can be cleared by manually stopping then restarting acquisition.  It is not yet understood why this occurs.  This behavior has not been observed on a more robust machine (e.g. quad core, 8GB RAM).  The working theory at this point is that RASDRviewer/RASDRproc and its use of the Cypress driver API requires two cores to itself and OS activity can interfere with the timing of completion requests for USB buffers.
+
+One very strong driver of this condtion was the use of burst mode transfer for USB3 super speed.  When the burst length is set to 1, the effect it has on a lower spec machine is dramatic.  Unfortunately, it was not the only thing needed, and in some rare cases a glitch was still observed to occur.  For this reason, a workaround was found to allow data to keep being collected.
+
+3) Scaling of the frequency plot, the use of markers and other aspects of the UI can produce unsatisfactory results.  Please be persistent in your efforts to make the plot look they way you want it.  RASDRproc v0.2.2.1 has for all intents and purposes solved the issues with the Power Plot.  Please let us know if you find a behavior that is unsatisfactory.
+
+4) "RASDRproc.exe", if started w/o a RASDR device connection may take a very long time to start.  This does not seem to be the case with "RASDRproc_d.exe"
+
+5) Sometimes when restarting (or if Auto Restart) is enabled, the program will raise an exception in the CCyUSBEndPoint::FinishDataXfer() as it deletes buffers.  This is when the stop is initiated by a call to LMLL_Testing_StopSdramRead() to stop collecting data from the USB stream.
+
+Debugging this has identified thread safety issues due to concurrent access to the endpoint functions exposed by the CyUSB API.  An attempt at addressing these had been made in v0.2.3.6 and field testing is in progress.  With v0.2.3.8 a STOP/START no longer de-allocates buffers; buffers are only de-allocated if the FFT parameters are changed.
+
+6) If choosing a high sample rate with a lot of integration, please be patient for the FFT spectrum window.  The first spectra will not be available until after the first integration time is complete.  You can estimate the ETA by observing the frame rate and dividing that from the 'average over frames' value.
+
+7) When using FFT plot markers, the font is not a fixed-width font, and so when there is a '1' displayed, the string shifts around and is distracting.  Need to figure out how to create and use a fixed-width font instead.  Some references:
+https://www.opengl.org/archives/resources/features/fontsurvey/#tmt
+http://diyhpl.us/~bryan/irc/darpa/avm/meta/meta/QRG/code-library/lisp/opengl/_devel/glfont2/glfont.htm
+
+8) If attempting to run RASDRproc on a machine via remote desktop, it can fail due to an OpenGL context not being available.  With v0.2.3.7, hopefully this will result in an informative message.  There should not be a reason why an OpenGL application cannot operate the same regardless of whether it is started on the console or via a remote desktop connection.  If the application is *already running*, there seems to be no problem with operating over remote desktop...
+
+UPDATE: this issue has been characterized and is due to the use of Vertex Buffer Object in a way that is incompatible with the OpenGL system that is exposed to the application when it is launched under remote desktop.  It is interesting that once an appliation is running, a remote desktop connection can be made and it silently switches without incident; it is only at application start that the code is has an issue.  A branch to investigate and characterize this has been made and the fruits of its labor will eventually make it into the master release branch:
+https://github.com/myriadrf/RASDR/compare/proj_ogl
+
+9) LNA3 (which is now available to be used) does not seem to provide any meaningful response in the system.
+
+10) When subtracting backround, the 'Mean' algorithm over-estimates the background.  This leads to a situation in which a negative residual remains after removal of the baseline.  This will appear as a minimum value (-370.0) on the spectral plot.  Some experimentation is required when attempting to make use of the background subtraction feature.

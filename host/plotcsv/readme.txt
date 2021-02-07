@@ -1,84 +1,83 @@
-Usage: plotcsv.py <filename.csv> [options]
+usage: plotcsv.py [-h] [--version] [-v | -q] [-a N] [-b PATH] [-c] [-d CHAR]
+                  [-e] [-k CONST] [-l] [-i] [--statistics PATH] [--debug] [-g]
+                  [-s N] [--fcenter FC] [--hold] [--bplot] [--ptype TYPE]
+                  [--atype TYPE] [--format X.Y.Z]
+                  [file [file ...]]
 
-Options:
-  --version             show program's version number and exit
+Post-Process RASDRviewer/RASDRproc spectrum data output files
+
+positional arguments:
+  file
+
+optional arguments:
   -h, --help            show this help message and exit
-  -a AVERAGE, --average=AVERAGE
-                        Specify the number of spectra to average for each plot; default=1
+  --version             show program's version number and exit
+  -v, --verbose         Turn on verbose output
+  -q, --quiet           Suppress progress messages
+  -a N, --average N     Specify the number of spectra to average for each plot
+  -b PATH, --background PATH
+                        Specify how to perform background subtraction;if the
+                        word automatic is used, then the background will be
+                        takenfrom the average of all lines in the file.
+                        Otherwise, it is takenas a file to process. The file
+                        must have the same frequency plan as the foreground
+                        file.
   -c, --cancel-dc       Cancel out component at frequency bin for 0Hz
-  -d DELIMITER, --delimiter=DELIMITER
-                        Specify the delimiter character to use; default=,
-  -e, --excel           Indicate that .csv file is in RASDRviewer's "Excel-optimized" format
-  -t, --datetime        Indicate that timestamps in the .csv file are in
-                        Excel's datetime format
-  -v, --verbose         Verbose
-
-Examples:
-
-This shows how Paul's "Excel" format can be processed with averaging
-
-dos> python plotcsv.py FFTOut-example.csv -e -v -a 3
-time= (2,)
-freq= (127,)
-spec= (2, 127)
-spectra= 2
-range (MHz) =[ -4.922 , 4.922 ]
-zero index= 63
-frequency bins= 127
-averaging= 3
-Saved spectrum-2014_Apr_24_22_31_37.png
-
-The below shows how the alternate format can be processed (without averaging):
-
-dos> python plotcsv.py FFTOut-datetime.csv -t -v
-time= (3,)
-freq= (16383,)
-spec= (3, 16383)
-spectra= 3
-range (MHz) =[ -4.998779297 , 5.0 ]
-zero index= 8190
-frequency bins= 16383
-start= 2014-03-13 07:02:27.000004
-end  = 2014-03-13 07:02:29
-seconds between samples= 1
-averaging= 1
-Saved spectrum-2014_Mar_13_07_02_27.png
-Saved spectrum-2014_Mar_13_07_02_27.png
-Saved spectrum-2014_Mar_13_07_02_29.png
-
-Here is the general format output as another example:
-
-dos> python plotcsv.py FFTOut-general.csv -v
-time= (2,)
-freq= (65535,)
-spec= (2, 65535)
-spectra= 2
-range (MHz) =[ -4.981 , 4.981 ]
-zero index= 32764
-frequency bins= 65535
-averaging= 1
-Saved spectrum-2014_Apr_26_03_11_54.png
-Saved spectrum-2014_Apr_26_03_11_55.png
-
+  -d CHAR, --delimiter CHAR
+                        Specify the delimiter character to use"
+  -e, --localtime       Indicate that .csv file has timestamps in
+                        RASDRviewer's "LocalTime" format
+  -k CONST, --calibration CONST
+                        Specify the calibration constant for the system;
+                        0.0=uncal
+  -l, --line            Perform line-by-line processing instead of loading
+                        entire file(s); NOTE: much slower but tolerates low
+                        memory better.
+  -i, --info            Produce information about a file only; do not generate
+                        any plots
+  --statistics PATH     Dump statistical information to a file in comma-
+                        separated-values format
+  --debug               Drop into ipython shell at predefined point(s) to
+                        debug the script
+  -g, --gui             Create interactive PLOTS
+  -s N, --smooth N      Smooth final plot using a sliding window of N points
+  --fcenter FC          Define the offset for the center frequency in Hz
+  --hold                Perform a maximum value HOLD during averaging and plot
+                        it as a second line
+  --bplot               If using background file, choose whether to plot the
+                        background reference in a difffert color
+  --ptype TYPE          Control plot vertical scale (linear or log)
+  --atype TYPE          Control averaging method (linear or log)
+  --format X.Y.Z        Specify the RASDRviewer .csv output format to
+                        interpret
 
 NOTES:
 
-You can use the pre-compiled version of the above scripted commands:
+Edit the 'go.bat' provided to assign the path to the file and any needed options.  Then double-click the go.bat file.
 
-dos> plotcsv.exe FFTOut-example.csv -e -a 3
-dos> plotcsv.exe FFTOut-datetime.csv -t
-dos> plotcsv.exe FFTOut-general.csv
+If you have python installed, you can also run the program with the python interpreter:
 
-Should produce the same result as using the scripted program.
+dos> python plotcsv.py FFTOut-2msps-500avg-srh77ca.csv -a 120
 
-You can also use the 'test.bat' to setup the parameters for the executable
-so you can run it from the Windows GUI by clicking it
+Should produce the same result as using the pre-compiled program.
 
+Several versions of RASDRviewer had produced different header formats that
+need to be parsed differently.  The --format option allows you to specify
+this if you are dealing with older data files.  Currently valid options are:
+1.0.4, 1.1.1, 1.2.2 (current)
+
+The file 'environment.yml' provides an easy way to generate a python virtual environment that has the needed dependencies.  Using Anaconda, execute:
+
+$ conda env create -f environment.yml
+$ source activate rasdr
+-or-
+dos> activate rasdr
+
+See: https://docs.continuum.io/anaconda/install.html
+See also: http://conda.pydata.org/docs/using/envs.html#use-environment-from-file
 
 BUGS:
 
 1) the cancel DC option isnt effective as it seems the highest energy is 2 bins away from actual Frequency 0
-2) when run from the executable, the verbose option doesnt seem to produce an output
-3) The '-e' and '-t' options do not work together as they should, '-e' takes priority
-4) The file formats need to be described
-5) The 'append' feature in RASDRviewer that adds a new frequency header to the same file is not supported correctly
+2) The file formats need to be described
+3) The 'append' feature in RASDRviewer that adds a new frequency header to the same file is not supported correctlyUsage: plotcsv.py <filename.csv> [options]
